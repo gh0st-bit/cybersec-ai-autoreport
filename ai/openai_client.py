@@ -27,7 +27,7 @@ class AIClient:
     def __init__(self):
         self.client = None
         self.api_key = None
-        self.model = "gpt-4"
+        self.model = "gpt-3.5-turbo"
         self.temperature = 0.5
         self.max_tokens = 1500
         
@@ -38,18 +38,21 @@ class AIClient:
         if OPENAI_AVAILABLE and self.api_key and self.api_key != "your_openai_api_key_here":
             try:
                 self.client = OpenAI(api_key=self.api_key)
-                print("OpenAI client initialized successfully")
+                print("[OK] OpenAI client initialized successfully")
             except Exception as e:
-                print(f"Failed to initialize OpenAI client: {e}")
+                print(f"[ERROR] Failed to initialize OpenAI client: {e}")
                 self.client = None
         else:
-            print("OpenAI not configured. Using mock responses.")
+            if not OPENAI_AVAILABLE:
+                print("[WARNING] OpenAI package not installed. Using mock responses.")
+            else:
+                print("[WARNING] OpenAI API key not configured. Using mock responses.")
     
     def load_config(self):
         """Load configuration from settings.yaml"""
         try:
             if not YAML_AVAILABLE:
-                print("PyYAML not available, using environment variables")
+                print("[WARNING] PyYAML not available, using environment variables")
                 self.api_key = os.getenv('OPENAI_API_KEY')
                 return
                 
@@ -60,13 +63,38 @@ class AIClient:
                 
                 openai_config = config.get('openai', {})
                 self.api_key = openai_config.get('api_key', os.getenv('OPENAI_API_KEY'))
-                self.model = openai_config.get('model', 'gpt-4')
+                self.model = openai_config.get('model', 'gpt-3.5-turbo')
                 self.temperature = openai_config.get('temperature', 0.5)
                 self.max_tokens = openai_config.get('max_tokens', 1500)
+                
+                # Debug: Print loaded config (without exposing full API key)
+                if self.api_key:
+                    key_preview = self.api_key[:10] + "..." if len(self.api_key) > 10 else "short_key"
+                    print(f"[DEBUG] Loaded API key: {key_preview}")
+                    print(f"[DEBUG] Using model: {self.model}")
+                else:
+                    print("[DEBUG] No API key found in config")
+            else:
+                print(f"[WARNING] Config file not found at {config_path}")
+                
         except Exception as e:
-            print(f"Failed to load config: {e}")
+            print(f"[ERROR] Failed to load config: {e}")
             # Try environment variable as fallback
             self.api_key = os.getenv('OPENAI_API_KEY')
+    
+    def reload_config(self):
+        """Reload configuration (useful after config changes)"""
+        self.load_config()
+        if OPENAI_AVAILABLE and self.api_key and self.api_key != "your_openai_api_key_here":
+            try:
+                self.client = OpenAI(api_key=self.api_key)
+                print("[OK] OpenAI client reloaded successfully")
+                return True
+            except Exception as e:
+                print(f"[ERROR] Failed to reload OpenAI client: {e}")
+                self.client = None
+                return False
+        return False
     
     def chat_completion(self, prompt, temperature=None, max_tokens=None):
         """

@@ -46,13 +46,38 @@ def export(html_file_path, output_path=None):
 def export_with_weasyprint(html_file_path, output_path):
     """Export PDF using WeasyPrint"""
     try:
+        # Check if HTML file exists
+        if not os.path.exists(html_file_path):
+            raise FileNotFoundError(f"HTML file not found: {html_file_path}")
+            
         # Convert HTML to PDF
+        print(f"[INFO] Converting {html_file_path} to PDF...")
         HTML(filename=html_file_path).write_pdf(output_path)
-        print(f"[OK] PDF report generated with WeasyPrint: {output_path}")
-        return output_path
+        
+        # Verify PDF was created
+        if os.path.exists(output_path) and os.path.getsize(output_path) > 0:
+            print(f"[OK] PDF report generated with WeasyPrint: {output_path}")
+            return output_path
+        else:
+            raise Exception("PDF file was not created or is empty")
     
     except Exception as e:
         print(f"[ERROR] WeasyPrint export failed: {str(e)}")
+        
+        # Check for common WeasyPrint issues
+        if "cairo" in str(e).lower():
+            print("[TIP] WeasyPrint Cairo error - install system dependencies:")
+            print("  Ubuntu/Debian: sudo apt-get install libcairo2-dev libpango1.0-dev")
+            print("  CentOS/RHEL: sudo yum install cairo-devel pango-devel")
+            print("  macOS: brew install cairo pango")
+            
+        elif "gtk" in str(e).lower():
+            print("[TIP] WeasyPrint GTK error - install GTK+ development libraries")
+            
+        elif "fontconfig" in str(e).lower():
+            print("[TIP] Font configuration error - install fontconfig:")
+            print("  Ubuntu/Debian: sudo apt-get install fontconfig")
+            
         # Fall back to alternative method
         return export_fallback(html_file_path, output_path)
 
@@ -61,24 +86,38 @@ def export_fallback(html_file_path, output_path):
     try:
         # Try wkhtmltopdf if available
         if check_wkhtmltopdf():
+            print("[INFO] Trying wkhtmltopdf as fallback...")
             return export_with_wkhtmltopdf(html_file_path, output_path)
         
-        # If no PDF libraries available, just copy HTML with .pdf extension
-        print("[WARNING] No PDF export libraries available. Creating HTML copy...")
+        # Try browser-based printing via headless Chrome/Chromium
+        if check_chrome_headless():
+            print("[INFO] Trying Chrome headless as fallback...")
+            return export_with_chrome(html_file_path, output_path)
+        
+        # If no PDF libraries available, create detailed HTML copy
+        print("[WARNING] No PDF export libraries available. Creating enhanced HTML copy...")
         
         # Read HTML content
         with open(html_file_path, 'r', encoding='utf-8') as f:
             html_content = f.read()
         
-        # Create a notice about PDF unavailability
+        # Create a detailed notice about PDF unavailability
         notice = """
-        <div style="background: #fff3cd; border: 1px solid #ffc107; padding: 15px; margin: 20px; border-radius: 5px;">
-            <strong>[WARNING] PDF Export Notice:</strong> PDF libraries are not available. 
-            This file contains the report in HTML format. To convert to PDF, please:
+        <div style="background: #fff3cd; border: 1px solid #ffc107; padding: 20px; margin: 20px; border-radius: 5px; font-family: Arial, sans-serif;">
+            <h3 style="color: #856404; margin-top: 0;">⚠️ PDF Export Notice</h3>
+            <p><strong>PDF libraries are not available on this system.</strong></p>
+            <p>This file contains your security report in HTML format. To convert to PDF:</p>
             <ul>
-                <li>Open this file in a web browser</li>
-                <li>Use the browser's "Print to PDF" function</li>
-                <li>Or install WeasyPrint: <code>pip install weasyprint</code></li>
+                <li><strong>Option 1:</strong> Open this file in a web browser → File → Print → Save as PDF</li>
+                <li><strong>Option 2:</strong> Install WeasyPrint: <code>pip install weasyprint</code></li>
+                <li><strong>Option 3:</strong> Install wkhtmltopdf: <a href="https://wkhtmltopdf.org/downloads.html">Download here</a></li>
+                <li><strong>Option 4:</strong> Use Chrome/Chromium headless (if available)</li>
+            </ul>
+            <p><strong>System Dependencies for WeasyPrint:</strong></p>
+            <ul>
+                <li>Ubuntu/Debian: <code>sudo apt-get install libcairo2-dev libpango1.0-dev libgdk-pixbuf2.0-dev libffi-dev shared-mime-info</code></li>
+                <li>CentOS/RHEL: <code>sudo yum install cairo-devel pango-devel gdk-pixbuf2-devel libffi-devel</code></li>
+                <li>macOS: <code>brew install cairo pango gdk-pixbuf libffi</code></li>
             </ul>
         </div>
         """
@@ -87,12 +126,12 @@ def export_fallback(html_file_path, output_path):
         html_content = html_content.replace('<body>', f'<body>{notice}')
         
         # Save as .pdf.html file
-        pdf_html_path = output_path + '.html'
+        pdf_html_path = output_path.replace('.pdf', '.pdf.html')
         with open(pdf_html_path, 'w', encoding='utf-8') as f:
             f.write(html_content)
         
-        print(f"[WARNING] PDF export not available. HTML report saved as: {pdf_html_path}")
-        print("💡 Tip: Install WeasyPrint for proper PDF export: pip install weasyprint")
+        print(f"[WARNING] PDF export not available. Enhanced HTML report saved as: {pdf_html_path}")
+        print("💡 Use browser's 'Print to PDF' to convert this file to PDF")
         
         return pdf_html_path
     
@@ -100,6 +139,70 @@ def export_fallback(html_file_path, output_path):
         print(f"[ERROR] Fallback PDF export failed: {str(e)}")
         # Just return the original HTML path
         return html_file_path
+
+def check_chrome_headless():
+    """Check if Chrome or Chromium headless is available"""
+    try:
+        import subprocess
+        
+        # Try different Chrome/Chromium commands
+        chrome_commands = [
+            'google-chrome',
+            'chromium-browser', 
+            'chromium',
+            'google-chrome-stable',
+            'chrome'
+        ]
+        
+        for cmd in chrome_commands:
+            try:
+                result = subprocess.run([cmd, '--version'], 
+                                      capture_output=True, text=True, timeout=5)
+                if result.returncode == 0:
+                    return cmd
+            except:
+                continue
+        return None
+    except:
+        return None
+
+def export_with_chrome(html_file_path, output_path):
+    """Export PDF using Chrome headless"""
+    try:
+        import subprocess
+        
+        chrome_cmd = check_chrome_headless()
+        if not chrome_cmd:
+            raise Exception("Chrome/Chromium not found")
+        
+        # Convert to absolute path
+        abs_html_path = os.path.abspath(html_file_path)
+        abs_output_path = os.path.abspath(output_path)
+        
+        # Chrome headless command
+        cmd = [
+            chrome_cmd,
+            '--headless',
+            '--disable-gpu',
+            '--disable-software-rasterizer',
+            '--no-sandbox',
+            '--disable-dev-shm-usage',
+            '--print-to-pdf=' + abs_output_path,
+            'file://' + abs_html_path
+        ]
+        
+        print(f"[INFO] Running Chrome headless: {' '.join(cmd[:3])}...")
+        result = subprocess.run(cmd, capture_output=True, text=True, timeout=30)
+        
+        if result.returncode == 0 and os.path.exists(output_path):
+            print(f"[OK] PDF report generated with Chrome headless: {output_path}")
+            return output_path
+        else:
+            raise Exception(f"Chrome headless failed: {result.stderr}")
+    
+    except Exception as e:
+        print(f"[ERROR] Chrome headless export failed: {str(e)}")
+        raise
 
 def check_wkhtmltopdf():
     """Check if wkhtmltopdf is available"""

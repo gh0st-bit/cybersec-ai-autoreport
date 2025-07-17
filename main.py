@@ -5,9 +5,27 @@ AI-powered cybersecurity report automation tool
 """
 
 import click
-import json
-import os
-import sys
+import json    # Step 3: Export Report
+    click.echo("Step 3/3: Generating report...")
+    try:
+        html_path = html_generator.export(findings)
+        click.echo(f"[OK] HTML report generated: {html_path}")
+        
+        if format == "pdf":
+            try:
+                pdf_path = pdf_exporter.export(html_path)
+                click.echo(f"[OK] PDF report generated: {pdf_path}")
+                click.echo(f"[SUCCESS] Full report completed: {pdf_path}")
+            except Exception as pdf_error:
+                click.echo(f"[ERROR] PDF generation failed: {str(pdf_error)}")
+                click.echo(f"[INFO] HTML report is still available: {html_path}")
+                click.echo("[TIP] Try running: ./install_dependencies.sh")
+        else:
+            click.echo(f"[SUCCESS] Full report completed: {html_path}")
+            
+    except Exception as e:
+        click.echo(f"[ERROR] Report generation failed: {str(e)}", err=True)
+        sys.exit(1)mport sys
 from pathlib import Path
 
 # Add project root to path

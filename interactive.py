@@ -229,12 +229,10 @@ class InteractiveCLI:
                     
                     # Ask if user wants to open report
                     if input("Open report in browser? (y/n): ").lower() == 'y':
-                        try:
-                            subprocess.run(['xdg-open', str(latest_report)])
-                        except:
-                            print(f"Please open: {latest_report}")
+                        self.safe_open_browser(str(latest_report))
         else:
             print("[ERROR] Report generation failed!")
+            print("[TIP] Check that the scan file is valid and the scan type is correct")
             
     def quick_actions_menu(self):
         """Show quick actions menu"""
@@ -297,7 +295,114 @@ class InteractiveCLI:
         current_key = "Not configured"
         
         try:
+            import yaml
             with open(self.config_path, 'r') as f:
+                config = yaml.safe_load(f)
+            
+            api_key = config.get('openai', {}).get('api_key', '')
+            if api_key and api_key != 'your_openai_api_key_here':
+                current_key = api_key[:10] + "..." if len(api_key) > 10 else "configured"
+                
+        except Exception as e:
+            print(f"[ERROR] Could not read config: {e}")
+            
+        print(f"Current status: {current_key}")
+        
+        if input("Update API key? (y/n): ").lower() == 'y':
+            new_key = input("Enter new OpenAI API key: ").strip()
+            
+            if new_key:
+                try:
+                    import yaml
+                    # Read current config
+                    with open(self.config_path, 'r') as f:
+                        config = yaml.safe_load(f)
+                    
+                    # Update API key
+                    config['openai']['api_key'] = new_key
+                    
+                    # Write back
+                    with open(self.config_path, 'w') as f:
+                        yaml.safe_dump(config, f, default_flow_style=False)
+                    
+                    print("[OK] API key updated successfully!")
+                    
+                    # Test the API key
+                    print("[INFO] Testing API key...")
+                    try:
+                        # Force reload the AI client
+                        from ai.openai_client import ai_client
+                        ai_client.reload_config()
+                        
+                        # Test with a simple query
+                        response = ai_client.chat_completion("Test message", max_tokens=10)
+                        if "Security analysis" in response or "vulnerability" in response.lower():
+                            print("[WARNING] API key test returned mock response. Check your key.")
+                        else:
+                            print("[OK] API key is working!")
+                            
+                    except Exception as e:
+                        print(f"[ERROR] API key test failed: {e}")
+                        
+                except Exception as e:
+                    print(f"[ERROR] Failed to update API key: {e}")
+            else:
+                print("No key provided.")
+                
+    def safe_open_browser(self, file_path):
+        """Safely open browser with error handling"""
+        try:
+            import webbrowser
+            import os
+            
+            # Convert to absolute path
+            abs_path = os.path.abspath(file_path)
+            file_url = f"file://{abs_path}"
+            
+            print(f"[INFO] Opening: {file_url}")
+            
+            # Try different methods
+            try:
+                # Method 1: webbrowser module
+                webbrowser.open(file_url)
+                print("[OK] Opened in default browser")
+                return True
+            except Exception as e:
+                print(f"[WARNING] webbrowser failed: {e}")
+                
+            # Method 2: xdg-open (Linux)
+            try:
+                subprocess.run(['xdg-open', abs_path], check=True, timeout=5)
+                print("[OK] Opened with xdg-open")
+                return True
+            except Exception as e:
+                print(f"[WARNING] xdg-open failed: {e}")
+                
+            # Method 3: System-specific commands
+            system_commands = {
+                'darwin': ['open'],  # macOS
+                'win32': ['start'],  # Windows
+                'linux': ['xdg-open']  # Linux
+            }
+            
+            import platform
+            system = platform.system().lower()
+            
+            if system in system_commands:
+                try:
+                    cmd = system_commands[system] + [abs_path]
+                    subprocess.run(cmd, check=True, timeout=5)
+                    print(f"[OK] Opened with {system_commands[system][0]}")
+                    return True
+                except Exception as e:
+                    print(f"[WARNING] {system_commands[system][0]} failed: {e}")
+                    
+        except Exception as e:
+            print(f"[ERROR] Browser launch failed: {e}")
+            
+        # Fallback: just show the path
+        print(f"[INFO] Please manually open: {os.path.abspath(file_path)}")
+        return False
                 content = f.read()
                 if "your_openai_api_key_here" not in content:
                     current_key = "Configured"

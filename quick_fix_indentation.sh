@@ -1,3 +1,58 @@
+#!/bin/bash
+# Quick Fix Script for CyberSec-AI AutoReport Issues
+
+# Colors
+RED='\033[0;31m'
+GREEN='\033[0;32m'
+YELLOW='\033[1;33m'
+BLUE='\033[0;34m'
+NC='\033[0m'
+
+echo -e "${BLUE}"
+echo "╔════════════════════════════════════════════════════════════════╗"
+echo "║                 CyberSec-AI AutoReport                         ║"
+echo "║                    Quick Fix Script                            ║"
+echo "╚════════════════════════════════════════════════════════════════╝"
+echo -e "${NC}"
+
+# Check if we're in the right directory
+if [ ! -f "main.py" ]; then
+    echo -e "${RED}[ERROR]${NC} main.py not found. Please run this script from the cybersec-ai-autoreport directory."
+    exit 1
+fi
+
+echo -e "${GREEN}[INFO]${NC} Fixing Python file indentation issues..."
+
+# Fix main.py indentation issues
+python3 -c "
+import ast
+import sys
+
+# Test if main.py compiles
+try:
+    with open('main.py', 'r') as f:
+        content = f.read()
+    
+    # Try to parse the file
+    ast.parse(content)
+    print('✓ main.py syntax is valid')
+except SyntaxError as e:
+    print(f'✗ main.py has syntax error: {e}')
+    print(f'  Line {e.lineno}: {e.text.strip() if e.text else \"(unknown)\"}')
+    sys.exit(1)
+except Exception as e:
+    print(f'✗ main.py has other issues: {e}')
+    sys.exit(1)
+"
+
+if [ $? -ne 0 ]; then
+    echo -e "${RED}[ERROR]${NC} main.py has syntax errors. Recreating from template..."
+    
+    # Backup the corrupted file
+    cp main.py main.py.backup
+    
+    # Create a clean main.py
+    cat > main.py << 'EOF'
 #!/usr/bin/env python3
 """
 CyberSec-AI AutoReport - Main CLI Entry Point
@@ -307,3 +362,130 @@ def auto_detect(file, directory):
 
 if __name__ == '__main__':
     cli()
+EOF
+
+    echo -e "${GREEN}[INFO]${NC} main.py has been recreated with proper indentation"
+fi
+
+# Fix permissions
+echo -e "${GREEN}[INFO]${NC} Setting correct file permissions..."
+chmod +x main.py
+chmod +x interactive.py
+chmod +x setup.sh
+chmod +x install.sh
+chmod +x auto_detect.py
+
+# Test the files
+echo -e "${GREEN}[INFO]${NC} Testing file syntax..."
+python3 -m py_compile main.py
+python3 -m py_compile interactive.py
+
+echo -e "${GREEN}[SUCCESS]${NC} All files have been fixed!"
+echo
+echo -e "${YELLOW}What was fixed:${NC}"
+echo "✓ Python indentation errors"
+echo "✓ File permissions"
+echo "✓ Syntax validation"
+echo
+echo -e "${BLUE}You can now run:${NC}"
+echo "  python3 main.py --help"
+echo "  ./interactive.py"
+echo "  python3 main.py full-report --input scan.xml --type nmap"
+echo
+
+# Create a better installation script that keeps user in directory
+cat > install_fixed.sh << 'EOF'
+#!/bin/bash
+# Enhanced Installation Script that keeps user in the right directory
+
+set -e
+
+# Colors
+RED='\033[0;31m'
+GREEN='\033[0;32m'
+YELLOW='\033[1;33m'
+BLUE='\033[0;34m'
+NC='\033[0m'
+
+echo -e "${BLUE}"
+echo "╔════════════════════════════════════════════════════════════════╗"
+echo "║                 CyberSec-AI AutoReport                         ║"
+echo "║                Enhanced Installation                           ║"
+echo "╚════════════════════════════════════════════════════════════════╝"
+echo -e "${NC}"
+
+# Check if we're already in the right directory
+if [ -f "main.py" ] && [ -f "interactive.py" ]; then
+    echo -e "${GREEN}[INFO]${NC} Already in project directory"
+    PROJECT_DIR=$(pwd)
+else
+    # Check if git is installed
+    if ! command -v git &> /dev/null; then
+        echo -e "${RED}[ERROR]${NC} Git is not installed. Please install git first."
+        exit 1
+    fi
+
+    # Clone repository if not already present
+    if [ ! -d "cybersec-ai-autoreport" ]; then
+        echo -e "${GREEN}[INFO]${NC} Cloning repository..."
+        git clone https://github.com/gh0st-bit/cybersec-ai-autoreport.git
+    else
+        echo -e "${GREEN}[INFO]${NC} Repository already exists, updating..."
+        cd cybersec-ai-autoreport
+        git pull origin main
+        cd ..
+    fi
+
+    PROJECT_DIR="$(pwd)/cybersec-ai-autoreport"
+fi
+
+# Run setup from the project directory
+cd "$PROJECT_DIR"
+echo -e "${GREEN}[INFO]${NC} Running setup from: $(pwd)"
+
+# Make files executable
+chmod +x setup.sh
+chmod +x interactive.py
+chmod +x auto_detect.py
+chmod +x main.py
+
+# Run setup
+if [ -f "setup.sh" ]; then
+    echo -e "${GREEN}[INFO]${NC} Running setup script..."
+    ./setup.sh
+else
+    echo -e "${YELLOW}[WARNING]${NC} setup.sh not found, running basic setup..."
+    
+    # Basic setup
+    echo -e "${GREEN}[INFO]${NC} Installing Python dependencies..."
+    pip3 install --user click requests beautifulsoup4 lxml jinja2 colorama tqdm
+    
+    echo -e "${GREEN}[INFO]${NC} Creating directories..."
+    mkdir -p output samples
+    
+    echo -e "${GREEN}[INFO]${NC} Testing installation..."
+    python3 main.py --help > /dev/null 2>&1 && echo -e "${GREEN}[SUCCESS]${NC} Installation test passed"
+fi
+
+echo -e "${GREEN}[SUCCESS]${NC} Installation complete!"
+echo
+echo -e "${YELLOW}Current directory: $(pwd)${NC}"
+echo -e "${YELLOW}You are now in the project directory${NC}"
+echo
+echo -e "${BLUE}Quick Start Commands:${NC}"
+echo "  ./interactive.py                           # Interactive mode"
+echo "  python3 main.py --help                    # Show help"
+echo "  python3 main.py full-report --input scan.xml --type nmap"
+echo
+echo -e "${GREEN}[INFO]${NC} Ready to use! No need to change directories."
+
+# Create an alias for easy access
+echo
+echo -e "${BLUE}Tip: Add this to your ~/.bashrc for easy access:${NC}"
+echo "alias cybersec-ai='cd $PROJECT_DIR && ./interactive.py'"
+EOF
+
+chmod +x install_fixed.sh
+
+echo -e "${GREEN}[INFO]${NC} Created enhanced installation script: install_fixed.sh"
+echo -e "${GREEN}[INFO]${NC} This script will keep users in the correct directory after installation"

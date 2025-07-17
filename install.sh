@@ -51,7 +51,10 @@ echo -e "${GREEN}[INFO]${NC} Running setup script..."
 
 echo -e "${GREEN}[SUCCESS]${NC} Installation complete!"
 echo
-echo -e "${YELLOW}Quick Start Commands:${NC}"
+echo -e "${YELLOW}Current directory: $(pwd)${NC}"
+echo -e "${YELLOW}You are now in the project directory!${NC}"
+echo
+echo -e "${BLUE}Quick Start Commands:${NC}"
 echo "  Interactive mode:     ./interactive.py"
 echo "  Auto-detect files:    python auto_detect.py"
 echo "  Batch process:        python main.py batch-process"
@@ -68,3 +71,9 @@ echo "  # Process specific file with auto-detection"
 echo "  python main.py full-report --input /path/to/scan.xml"
 echo
 echo -e "${GREEN}[INFO]${NC} Run './interactive.py' to get started!"
+echo -e "${GREEN}[INFO]${NC} No need to change directories - you're already in the right place!"
+
+# Keep user in the project directory by spawning a new shell
+echo -e "${BLUE}[INFO]${NC} Spawning new shell in project directory..."
+echo -e "${BLUE}[INFO]${NC} Type 'exit' to return to your previous directory"
+exec bash

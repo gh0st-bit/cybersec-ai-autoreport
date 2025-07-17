@@ -1,0 +1,12 @@
+{
+  "issues": [
+    {
+      "issue_name": "SQL Injection",
+      "issue_type": "1048576",
+      "severity": "High",
+      "confidence": "Certain",
+      "url": "https://example.com/login",
+      "description": "SQL injection vulnerability detected"
+    }
+  ]
+}

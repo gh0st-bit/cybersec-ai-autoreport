@@ -1,0 +1,26 @@
+{
+  "openai": {
+    "api_key": "",
+    "model": "gpt-3.5-turbo",
+    "max_tokens": 1000
+  },
+  "pdf": {
+    "engine": "weasyprint",
+    "fallback_engines": [
+      "chrome_headless",
+      "wkhtmltopdf"
+    ],
+    "page_size": "A4",
+    "margins": {
+      "top": "20mm",
+      "right": "20mm",
+      "bottom": "20mm",
+      "left": "20mm"
+    }
+  },
+  "output": {
+    "directory": "output",
+    "filename_format": "security_report_{timestamp}",
+    "include_timestamp": true
+  }
+}

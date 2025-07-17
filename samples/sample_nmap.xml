@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<nmaprun>
+    <host>
+        <address addr="192.168.1.1" addrtype="ipv4"/>
+        <ports>
+            <port protocol="tcp" portid="80">
+                <state state="open"/>
+                <service name="http" product="Apache" version="2.4.41"/>
+            </port>
+            <port protocol="tcp" portid="443">
+                <state state="open"/>
+                <service name="https" product="Apache" version="2.4.41"/>
+            </port>
+        </ports>
+    </host>
+</nmaprun>

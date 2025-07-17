@@ -1,0 +1,17 @@
+[
+  {
+    "template": "apache-version-detect",
+    "template-url": "https://templates.nuclei.sh/apache-version-detect",
+    "info": {
+      "name": "Apache Version Detection",
+      "author": "pdteam",
+      "severity": "info"
+    },
+    "type": "http",
+    "host": "https://example.com",
+    "matched-at": "https://example.com/",
+    "extracted-results": [
+      "Apache/2.4.41"
+    ]
+  }
+]

@@ -104,14 +104,27 @@ def export(file, format, output):
 
 @cli.command()
 @click.option('--input', '-i', required=True, help='Path to scan file')
-@click.option('--type', '-t', required=True, 
-              type=click.Choice(['nmap', 'burp', 'nuclei']), 
-              help='Type of scan file')
-@click.option('--format', '-fmt', default='pdf', 
+@click.option('--type', '-t', 
+              type=click.Choice(['nmap', 'burp', 'nuclei', 'auto']), 
+              default='auto',
+              help='Type of scan file (auto-detect by default)')
+@click.option('--format', '-fmt', default='html', 
               type=click.Choice(['html', 'pdf']), help='Export format')
 def full_report(input, type, format):
     """One-click: Parse → AI Enhance → Export"""
     click.echo("[LAUNCH] Running full report generation pipeline...")
+    
+    # Auto-detect scan type if needed
+    if type == 'auto':
+        from auto_detect import ScanAutoDetector
+        detector = ScanAutoDetector()
+        detected_type = detector.detect_scan_type(input)
+        if detected_type:
+            type = detected_type
+            click.echo(f"[INFO] Auto-detected scan type: {type}")
+        else:
+            click.echo("[ERROR] Could not auto-detect scan type. Please specify --type")
+            sys.exit(1)
     
     # Step 1: Parse
     click.echo("Step 1/3: Parsing scan file...")
@@ -211,6 +224,79 @@ def list():
             click.echo(f"    Command: {tool.get('command', 'N/A')}")
     except Exception as e:
         click.echo(f"[ERROR] Failed to list tools: {str(e)}", err=True)
+
+@cli.command()
+@click.option('--directory', '-d', default='.', help='Directory to process')
+@click.option('--format', '-fmt', default='html', 
+              type=click.Choice(['html', 'pdf']), help='Export format')
+@click.option('--recursive', '-r', is_flag=True, help='Search recursively')
+def batch_process(directory, format, recursive):
+    """Process all scan files in a directory"""
+    click.echo(f"[LAUNCH] Batch processing directory: {directory}")
+    
+    try:
+        from auto_detect import AutoProcessor
+        processor = AutoProcessor()
+        
+        # Find and process all scan files
+        reports = processor.process_directory(directory, format)
+        
+        if reports:
+            click.echo(f"[SUCCESS] Generated {len(reports)} reports:")
+            for report in reports:
+                click.echo(f"  {report}")
+        else:
+            click.echo("[WARNING] No scan files found or processed")
+            
+    except Exception as e:
+        click.echo(f"[ERROR] Batch processing failed: {str(e)}", err=True)
+        sys.exit(1)
+
+@cli.command()
+def interactive():
+    """Launch interactive mode"""
+    click.echo("[LAUNCH] Starting interactive mode...")
+    
+    try:
+        from interactive import InteractiveCLI
+        cli_app = InteractiveCLI()
+        cli_app.main_menu()
+    except Exception as e:
+        click.echo(f"[ERROR] Interactive mode failed: {str(e)}", err=True)
+        sys.exit(1)
+
+@cli.command()
+@click.option('--file', '-f', help='File to analyze')
+@click.option('--directory', '-d', default='.', help='Directory to scan')
+def auto_detect(file, directory):
+    """Auto-detect scan file types"""
+    try:
+        from auto_detect import ScanAutoDetector
+        detector = ScanAutoDetector()
+        
+        if file:
+            # Analyze single file
+            file_info = detector.get_file_info(file)
+            if file_info:
+                click.echo(f"File: {file_info['name']}")
+                click.echo(f"Type: {file_info['detected_type']}")
+                click.echo(f"Valid: {file_info['is_valid']}")
+                click.echo(f"Size: {file_info['size']} bytes")
+            else:
+                click.echo("[ERROR] File not found")
+        else:
+            # Scan directory
+            scan_files = detector.find_scan_files(directory)
+            if scan_files:
+                click.echo(f"Found {len(scan_files)} scan files:")
+                for file_path, scan_type in scan_files:
+                    click.echo(f"  {file_path} -> {scan_type}")
+            else:
+                click.echo("[INFO] No scan files found")
+                
+    except Exception as e:
+        click.echo(f"[ERROR] Auto-detection failed: {str(e)}", err=True)
+        sys.exit(1)
 
 if __name__ == '__main__':
     cli()

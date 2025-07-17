@@ -18,8 +18,9 @@ def save_json(data, file_path, pretty=True):
         pretty (bool): Whether to format JSON with indentation
     """
     try:
-        # Ensure directory exists
-        os.makedirs(os.path.dirname(file_path), exist_ok=True)
+        # Ensure directory exists only if file_path contains a directory
+        if file_path and os.path.dirname(file_path):
+            os.makedirs(os.path.dirname(file_path), exist_ok=True)
         
         with open(file_path, 'w', encoding='utf-8') as f:
             if pretty:

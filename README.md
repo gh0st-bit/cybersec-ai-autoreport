@@ -2,6 +2,15 @@
 
 An intelligent cybersecurity reporting tool that automatically parses security scan results, enhances them with AI-powered analysis, and generates professional reports.
 
+## ✨ New Features
+
+- **🤖 Auto-Detection**: Automatically detects scan types (Nmap, Burp, Nuclei)
+- **📱 Interactive Mode**: User-friendly guided interface
+- **📦 Batch Processing**: Process multiple scan files at once
+- **🚀 One-Command Setup**: Complete installation in one command
+- **🔍 Smart File Discovery**: Automatically finds scan files in directories
+- **⚡ Zero Configuration**: Works out of the box with sensible defaults
+
 ## Features
 
 - **Multi-Scanner Support**: Nmap, Burp Suite, Nuclei, and custom tools
@@ -11,23 +20,42 @@ An intelligent cybersecurity reporting tool that automatically parses security s
 - **CLI Interface**: Easy-to-use command-line interface
 - **Modular Architecture**: Easily extensible and maintainable codebase
 
-## Quick Start
+## 🚀 Super Quick Start (One Command)
 
-### Installation
+For the fastest setup, run this single command:
 
-1. **Clone the repository:**
 ```bash
-git clone https://github.com/yourusername/cybersec-ai-autoreport.git
-cd cybersec-ai-autoreport
+curl -fsSL https://raw.githubusercontent.com/gh0st-bit/cybersec-ai-autoreport/main/install.sh | bash
 ```
 
-2. **Create virtual environment:**
+## Manual Installation
+
+### 1. Clone and Setup
+
 ```bash
-python -m venv .venv
-# Windows
-.venv\Scripts\activate
-# Linux/Mac
-source .venv/bin/activate
+git clone https://github.com/gh0st-bit/cybersec-ai-autoreport.git
+cd cybersec-ai-autoreport
+chmod +x setup.sh
+./setup.sh
+```
+
+### 2. Start Using (Interactive Mode - Recommended)
+
+```bash
+./interactive.py
+```
+
+### 3. Or Use Command Line
+
+```bash
+# Auto-detect and process any scan file
+python main.py full-report --input scan_file.xml
+
+# Process all scans in current directory
+python main.py batch-process
+
+# Interactive mode
+python main.py interactive
 ```
 
 3. **Install dependencies:**

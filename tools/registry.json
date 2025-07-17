@@ -1,0 +1,18 @@
+{
+  "nmap": {
+    "name": "Nmap Network Scanner",
+    "command": "nmap -sV -sC {input} -oX {output}",
+    "description": "Network discovery and security auditing",
+    "input_type": "targets",
+    "output_type": "xml",
+    "category": "network_scan"
+  },
+  "nuclei": {
+    "name": "Nuclei Vulnerability Scanner", 
+    "command": "nuclei -l {input} -o {output} -json",
+    "description": "Fast vulnerability scanner based on simple YAML templates",
+    "input_type": "urls",
+    "output_type": "json",
+    "category": "vulnerability_scan"
+  }
+}

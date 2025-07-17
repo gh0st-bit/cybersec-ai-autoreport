@@ -1,0 +1,23 @@
+# CyberSec-AI AutoReport Configuration
+openai:
+  api_key: "your_openai_api_key_here"
+  model: "gpt-3.5-turbo"
+  temperature: 0.5
+  max_tokens: 1500
+
+report:
+  title: "Cybersecurity Assessment Report"
+  company: "Your Company Name"
+  author: "Security Team"
+  template: "default"
+
+paths:
+  templates: "templates"
+  outputs: "outputs"
+  reports: "reports"
+  tools_registry: "tools/registry.json"
+
+export:
+  formats: ["html", "pdf"]
+  include_charts: true
+  include_executive_summary: true

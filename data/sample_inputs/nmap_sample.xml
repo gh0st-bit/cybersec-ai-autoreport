@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<nmaprun scanner="nmap" args="nmap -sV -sC 192.168.1.10" version="7.80" xmloutputversion="1.04">
+<host>
+  <status state="up" reason="localhost-response"/>
+  <address addr="192.168.1.10" addrtype="ipv4"/>
+  <hostnames>
+    <hostname name="test-server" type="PTR"/>
+  </hostnames>
+  <ports>
+    <port protocol="tcp" portid="22">
+      <state state="open" reason="syn-ack"/>
+      <service name="ssh" version="OpenSSH 8.0" product="OpenSSH"/>
+    </port>
+    <port protocol="tcp" portid="80">
+      <state state="open" reason="syn-ack"/>
+      <service name="http" version="Apache 2.4.41" product="Apache httpd"/>
+    </port>
+    <port protocol="tcp" portid="443">
+      <state state="open" reason="syn-ack"/>
+      <service name="https" version="Apache 2.4.41" product="Apache httpd"/>
+    </port>
+  </ports>
+</host>
+</nmaprun>

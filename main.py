@@ -15,7 +15,12 @@ project_root = Path(__file__).parent
 sys.path.insert(0, str(project_root))
 
 from parsers import nmap_parser, burp_parser, nuclei_parser
-from exporters import html_generator, pdf_exporter
+from exporters import (
+    html_generator, pdf_exporter,
+    AdvancedHTMLGenerator, AdvancedPDFExporter, MultiFormatExporter,
+    export_all_formats, export_compliance_pack, export_executive_summary,
+    export_technical_report, get_export_info
+)
 from ai import summarizer, severity_classifier, remediation_generator
 from tools.runner import register_tool, execute_tool, list_tools
 from tools.parser import parse_output
@@ -80,24 +85,84 @@ def enhance(file, output):
 @cli.command()
 @click.option('--file', '-f', required=True, help='Enhanced JSON file')
 @click.option('--format', '-fmt', default='pdf', 
-              type=click.Choice(['html', 'pdf']), help='Export format')
+              type=click.Choice(['html', 'pdf', 'all', 'compliance', 'executive', 'technical']), 
+              help='Export format')
 @click.option('--output', '-o', help='Output file path')
-def export(file, format, output):
-    """Export report to HTML or PDF"""
+@click.option('--theme', '-th', default='executive',
+              type=click.Choice(['executive', 'technical', 'compliance']),
+              help='Report theme for advanced formats')
+@click.option('--advanced', '-adv', is_flag=True, help='Use advanced industrial-level formatting')
+def export(file, format, output, theme, advanced):
+    """Export report to HTML, PDF, or multiple formats with industrial-level formatting"""
     click.echo(f"[FILE] Exporting report as {format.upper()}: {file}")
     
     try:
         findings = load_json(file)
         
-        # Generate HTML first
-        html_path = html_generator.export(findings, output_path=output)
-        
-        if format == "pdf":
-            pdf_path = pdf_exporter.export(html_path)
-            click.echo(f"[OK] PDF report generated: {pdf_path}")
+        # Determine base output path
+        if not output:
+            base_path = os.path.splitext(file)[0]
         else:
-            click.echo(f"[OK] HTML report generated: {html_path}")
+            base_path = os.path.splitext(output)[0]
+        
+        if format == "all":
+            # Export all formats
+            click.echo("[EXPORT] Generating all formats...")
+            exported_files = export_all_formats(findings, base_path)
+            click.echo(f"[SUCCESS] Generated {len(exported_files)} files:")
+            for file_path in exported_files:
+                click.echo(f"  ✓ {file_path}")
+                
+        elif format == "compliance":
+            # Export compliance pack
+            click.echo("[EXPORT] Generating compliance pack...")
+            exported_files = export_compliance_pack(findings, base_path)
+            click.echo(f"[SUCCESS] Generated compliance pack ({len(exported_files)} files):")
+            for file_path in exported_files:
+                click.echo(f"  ✓ {file_path}")
+                
+        elif format == "executive":
+            # Export executive summary
+            click.echo("[EXPORT] Generating executive summary...")
+            exported_files = export_executive_summary(findings, base_path)
+            click.echo(f"[SUCCESS] Generated executive summary:")
+            for file_path in exported_files:
+                click.echo(f"  ✓ {file_path}")
+                
+        elif format == "technical":
+            # Export technical report
+            click.echo("[EXPORT] Generating technical report...")
+            exported_files = export_technical_report(findings, base_path)
+            click.echo(f"[SUCCESS] Generated technical report:")
+            for file_path in exported_files:
+                click.echo(f"  ✓ {file_path}")
+                
+        elif advanced:
+            # Advanced export
+            if format == "html":
+                html_generator = AdvancedHTMLGenerator()
+                html_path = html_generator.export(findings, f"{base_path}.html")
+                click.echo(f"[SUCCESS] Advanced HTML report generated: {html_path}")
+                
+            elif format == "pdf":
+                # Generate HTML first, then PDF
+                html_generator = AdvancedHTMLGenerator()
+                html_path = html_generator.export(findings, f"{base_path}.html")
+                
+                pdf_exporter = AdvancedPDFExporter()
+                pdf_path = pdf_exporter.export(html_path, f"{base_path}.pdf", format_type=theme)
+                click.echo(f"[SUCCESS] Advanced PDF report generated: {pdf_path}")
+                
+        else:
+            # Legacy export
+            html_path = html_generator.export(findings, output_path=output)
             
+            if format == "pdf":
+                pdf_path = pdf_exporter.export(html_path)
+                click.echo(f"[SUCCESS] PDF report generated: {pdf_path}")
+            else:
+                click.echo(f"[SUCCESS] HTML report generated: {html_path}")
+                
     except Exception as e:
         click.echo(f"[ERROR] Error exporting report: {str(e)}", err=True)
         sys.exit(1)
@@ -108,22 +173,31 @@ def export(file, format, output):
               type=click.Choice(['nmap', 'burp', 'nuclei', 'auto']), 
               default='auto',
               help='Type of scan file (auto-detect by default)')
-@click.option('--format', '-fmt', default='html', 
-              type=click.Choice(['html', 'pdf']), help='Export format')
-def full_report(input, type, format):
-    """One-click: Parse → AI Enhance → Export"""
+@click.option('--format', '-fmt', default='executive', 
+              type=click.Choice(['html', 'pdf', 'all', 'compliance', 'executive', 'technical']), 
+              help='Export format')
+@click.option('--theme', '-th', default='executive',
+              type=click.Choice(['executive', 'technical', 'compliance']),
+              help='Report theme')
+@click.option('--advanced', '-adv', is_flag=True, default=True, help='Use advanced industrial-level formatting')
+def full_report(input, type, format, theme, advanced):
+    """One-click: Parse → AI Enhance → Export with industrial-level formatting"""
     click.echo("[LAUNCH] Running full report generation pipeline...")
     
     # Auto-detect scan type if needed
     if type == 'auto':
-        from auto_detect import ScanAutoDetector
-        detector = ScanAutoDetector()
-        detected_type = detector.detect_scan_type(input)
-        if detected_type:
-            type = detected_type
-            click.echo(f"[INFO] Auto-detected scan type: {type}")
-        else:
-            click.echo("[ERROR] Could not auto-detect scan type. Please specify --type")
+        try:
+            from auto_detect import ScanAutoDetector
+            detector = ScanAutoDetector()
+            detected_type = detector.detect_scan_type(input)
+            if detected_type:
+                type = detected_type
+                click.echo(f"[INFO] Auto-detected scan type: {type}")
+            else:
+                click.echo("[ERROR] Could not auto-detect scan type. Please specify --type")
+                sys.exit(1)
+        except ImportError:
+            click.echo("[WARNING] Auto-detection not available. Please specify --type")
             sys.exit(1)
     
     # Step 1: Parse
@@ -156,25 +230,120 @@ def full_report(input, type, format):
         sys.exit(1)
     
     # Step 3: Export Report
-    click.echo("Step 3/3: Generating report...")
+    click.echo("Step 3/3: Generating industrial-level report...")
     try:
-        html_path = html_generator.export(findings)
-        click.echo(f"[OK] HTML report generated: {html_path}")
+        # Determine base output path
+        base_path = os.path.splitext(input)[0]
         
-        if format == "pdf":
-            try:
-                pdf_path = pdf_exporter.export(html_path)
-                click.echo(f"[OK] PDF report generated: {pdf_path}")
-                click.echo(f"[SUCCESS] Full report completed: {pdf_path}")
-            except Exception as pdf_error:
-                click.echo(f"[ERROR] PDF generation failed: {str(pdf_error)}")
-                click.echo(f"[INFO] HTML report is still available: {html_path}")
-                click.echo("[TIP] Try running: ./install_dependencies.sh")
+        if format == "all":
+            # Export all formats
+            click.echo("[EXPORT] Generating all formats...")
+            exported_files = export_all_formats(findings, base_path)
+            click.echo(f"[SUCCESS] Generated {len(exported_files)} files:")
+            for file_path in exported_files:
+                click.echo(f"  ✓ {file_path}")
+                
+        elif format == "compliance":
+            # Export compliance pack
+            click.echo("[EXPORT] Generating compliance pack...")
+            exported_files = export_compliance_pack(findings, base_path)
+            click.echo(f"[SUCCESS] Generated compliance pack ({len(exported_files)} files):")
+            for file_path in exported_files:
+                click.echo(f"  ✓ {file_path}")
+                
+        elif format == "executive":
+            # Export executive summary
+            click.echo("[EXPORT] Generating executive summary...")
+            exported_files = export_executive_summary(findings, base_path)
+            click.echo(f"[SUCCESS] Generated executive summary:")
+            for file_path in exported_files:
+                click.echo(f"  ✓ {file_path}")
+                
+        elif format == "technical":
+            # Export technical report
+            click.echo("[EXPORT] Generating technical report...")
+            exported_files = export_technical_report(findings, base_path)
+            click.echo(f"[SUCCESS] Generated technical report:")
+            for file_path in exported_files:
+                click.echo(f"  ✓ {file_path}")
+                
+        elif advanced:
+            # Advanced export
+            if format == "html":
+                html_generator = AdvancedHTMLGenerator()
+                html_path = html_generator.export(findings, f"{base_path}.html")
+                click.echo(f"[SUCCESS] Advanced HTML report generated: {html_path}")
+                
+            elif format == "pdf":
+                # Generate HTML first, then PDF
+                html_generator = AdvancedHTMLGenerator()
+                html_path = html_generator.export(findings, f"{base_path}.html")
+                
+                pdf_exporter = AdvancedPDFExporter()
+                pdf_path = pdf_exporter.export(html_path, f"{base_path}.pdf", format_type=theme)
+                click.echo(f"[SUCCESS] Advanced PDF report generated: {pdf_path}")
+                
         else:
-            click.echo(f"[SUCCESS] Full report completed: {html_path}")
+            # Legacy export
+            html_path = html_generator.export(findings)
+            click.echo(f"[OK] HTML report generated: {html_path}")
+            
+            if format == "pdf":
+                try:
+                    pdf_path = pdf_exporter.export(html_path)
+                    click.echo(f"[OK] PDF report generated: {pdf_path}")
+                    click.echo(f"[SUCCESS] Full report completed: {pdf_path}")
+                except Exception as pdf_error:
+                    click.echo(f"[ERROR] PDF generation failed: {str(pdf_error)}")
+                    click.echo(f"[INFO] HTML report is still available: {html_path}")
+                    click.echo("[TIP] Try running: ./install_dependencies.sh")
+            else:
+                click.echo(f"[SUCCESS] Full report completed: {html_path}")
             
     except Exception as e:
         click.echo(f"[ERROR] Report generation failed: {str(e)}", err=True)
+        sys.exit(1)
+
+@cli.command()
+def export_info():
+    """Show available export formats and methods"""
+    click.echo("[INFO] Available Export Formats and Methods:")
+    
+    try:
+        info = get_export_info()
+        
+        click.echo("\n📊 HTML Templates:")
+        for template in info['html_templates']:
+            click.echo(f"  • {template}")
+            
+        click.echo("\n📄 PDF Formats:")
+        for format_type in info['pdf_formats']:
+            click.echo(f"  • {format_type}")
+            
+        click.echo("\n🔧 PDF Generation Methods:")
+        for method in info['pdf_methods']:
+            click.echo(f"  • {method}")
+            
+        click.echo(f"\n✅ Recommended PDF Method: {info['recommended_pdf_method']}")
+        
+        click.echo("\n🌐 Multi-Format Exports:")
+        for format_type in info['multi_formats']:
+            click.echo(f"  • {format_type}")
+            
+        click.echo("\n🛡️ Compliance Formats:")
+        for format_type in info['compliance_formats']:
+            click.echo(f"  • {format_type}")
+            
+        click.echo("\n📋 Export Commands:")
+        click.echo("  • full-report -fmt executive     # Executive summary")
+        click.echo("  • full-report -fmt technical     # Technical report")
+        click.echo("  • full-report -fmt compliance    # Compliance pack")
+        click.echo("  • full-report -fmt all          # All formats")
+        click.echo("  • export -fmt html --advanced    # Advanced HTML")
+        click.echo("  • export -fmt pdf --advanced     # Advanced PDF")
+        
+    except Exception as e:
+        click.echo(f"[ERROR] Failed to get export info: {str(e)}", err=True)
         sys.exit(1)
 
 # Custom Tools Commands

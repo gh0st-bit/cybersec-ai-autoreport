@@ -280,10 +280,7 @@ class InteractiveCLI:
                 choice = input("\nEnter number to open (or press Enter): ").strip()
                 if choice.isdigit() and 1 <= int(choice) <= len(report_files):
                     report_file = sorted(report_files, key=lambda x: x.stat().st_mtime, reverse=True)[int(choice)-1]
-                    try:
-                        subprocess.run(['xdg-open', str(report_file)])
-                    except:
-                        print(f"Please open: {report_file}")
+                    self.safe_open_browser(str(report_file))
             else:
                 print("No reports found.")
         else:
@@ -403,39 +400,13 @@ class InteractiveCLI:
         # Fallback: just show the path
         print(f"[INFO] Please manually open: {os.path.abspath(file_path)}")
         return False
-                content = f.read()
-                if "your_openai_api_key_here" not in content:
-                    current_key = "Configured"
-        except:
-            pass
-            
-        print(f"Current status: {current_key}")
-        
-        if input("Update API key? (y/n): ").lower() == 'y':
-            api_key = input("Enter new OpenAI API key: ").strip()
-            if api_key:
-                try:
-                    with open(self.config_path, 'r') as f:
-                        content = f.read()
-                    
-                    # Replace the API key
-                    import re
-                    content = re.sub(r'api_key: ".*"', f'api_key: "{api_key}"', content)
-                    
-                    with open(self.config_path, 'w') as f:
-                        f.write(content)
-                        
-                    print("[OK] API key updated successfully!")
-                except Exception as e:
-                    print(f"[ERROR] Failed to update API key: {e}")
-            else:
-                print("API key not updated.")
-                
+    
     def main_menu(self):
-        """Main interactive menu"""
+        """Main menu loop"""
         while True:
             self.print_banner()
             
+            # Check setup
             if not self.check_setup():
                 break
                 

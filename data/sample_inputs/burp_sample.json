@@ -1,0 +1,11 @@
+[
+    {
+        "severity": "Medium",
+        "confidence": "Certain",
+        "host": "https://example.com",
+        "path": "/login",
+        "issue_name": "Cross-site scripting (reflected)",
+        "issue_detail": "The application copies input from a request parameter directly into the HTTP response.",
+        "remediation": "Encode user input before including it in application responses."
+    }
+]

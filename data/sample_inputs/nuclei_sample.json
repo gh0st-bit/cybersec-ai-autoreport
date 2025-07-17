@@ -1,0 +1,11 @@
+[
+    {
+        "template_id": "http-missing-security-headers",
+        "template_name": "HTTP Missing Security Headers",
+        "severity": "info",
+        "host": "https://example.com",
+        "matched_at": "https://example.com/",
+        "extracted_results": ["missing X-Frame-Options header"],
+        "timestamp": "2025-07-17T10:30:00Z"
+    }
+]
